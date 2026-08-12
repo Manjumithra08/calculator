@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aperture — Image Gallery</title>
+
+<!-- Google Fonts: a serif display face for headings + a clean sans for body/UI -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+  :root {
+    --bg: #14141a;              /* deep charcoal background */
+    --bg-soft: #1c1c24;         /* slightly lighter panel background */
+    --card: #1f1f28;            /* gallery card background */
+    --line: #2a2a35;            /* hairline borders / dividers */
+    --text: #f2ede4;            /* warm off-white text */
+    --text-dim: #c6bfe5;        /* muted secondary text */
+    --accent: #4bbee8;          /* warm amber accent (the "signature" color) */
+    --accent-soft: rgba(232, 165, 75, 0.15);
+    --shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    --radius: 14px;
+    --transition: 0.35s cubic-bezier(.22, .61, .36, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    /* Subtle vignette so the page doesn't feel like a flat block of color */
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(232, 165, 75, 0.07), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(232, 165, 75, 0.05), transparent 45%);
+  }
+
+  img { max-width: 100%; display: block; }
+
+  /* Visible keyboard focus ring for accessibility */
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  ::selection { background: var(--accent); color: #1a1a1a; }
+  .site-header {
+    padding: 64px 24px 32px;
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 18px;
+  }
+
+  .eyebrow::before,
+  .eyebrow::after {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.6;
+  }
+
+  .site-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 800;
+    font-size: clamp(2.4rem, 5vw, 3.4rem);
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+
+  .site-header h1 em {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .site-header p {
+    color: var(--text-dim);
+    font-size: 1.02rem;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 24px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .filter-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-dim);
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    padding: 10px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .filter-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1a1408;
+    box-shadow: 0 8px 20px var(--accent-soft);
+  }
+  .gallery {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 22px;
+  }
+
+  .gallery-item {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    aspect-ratio: 4 / 3;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    transition: transform var(--transition), box-shadow var(--transition);
+    /* Fade/scale in on load for a bit of polish */
+    animation: rise 0.6s ease both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(.22,.61,.36,1), filter var(--transition);
+  }
+
+  .gallery-item:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow);
+  }
+
+  .gallery-item:hover img {
+    transform: scale(1.08);
+  }
+
+  /* Caption overlay that slides up from the bottom on hover */
+  .item-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 18px;
+    background: linear-gradient(to top, rgba(10,10,12,0.92) 0%, rgba(10,10,12,0.15) 55%, transparent 100%);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity var(--transition), transform var(--transition);
+  }
+
+  .gallery-item:hover .item-overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .item-tag {
+    align-self: flex-start;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #1a1408;
+    background: var(--accent);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+
+  .item-overlay h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .item-overlay p {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* Small "expand" icon in the corner, appears on hover */
+  .expand-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(20,20,26,0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    opacity: 0;
+    transform: scale(0.7);
+    transition: all var(--transition);
+  }
+
+  .gallery-item:hover .expand-icon {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Fade-out state applied via JS when an item is filtered out */
+  .gallery-item.hide {
+    display: none;
+  }
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 12, 0.92);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition);
+    padding: 24px;
+  }
+
+  .lightbox.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .lightbox-content {
+    position: relative;
+    max-width: 900px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: scale(0.94);
+    transition: transform var(--transition);
+  }
+
+  .lightbox.open .lightbox-content {
+    transform: scale(1);
+  }
+
+  .lightbox-image-wrap {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+  }
+
+  .lightbox-image-wrap img {
+    width: 100%;
+    max-height: 68vh;
+    object-fit: contain;
+    background: #0a0a0c;
+    transition: filter 0.3s ease;
+  }
+
+  .lightbox-caption {
+    margin-top: 18px;
+    text-align: center;
+  }
+
+  .lightbox-caption h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+  }
+
+  .lightbox-caption p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-top: 4px;
+  }
+
+  .lightbox-counter {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+  }
+
+  /* Close button */
+  .lb-close {
+    position: absolute;
+    top: -18px;
+    right: -18px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #1a1408;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+    transition: transform 0.2s ease;
+  }
+
+  .lb-close:hover { transform: rotate(90deg) scale(1.05); }
+
+  /* Prev / Next navigation arrows */
+  .lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: rgba(28, 28, 36, 0.85);
+    color: var(--text);
+    font-size: 1.4rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+  }
+
+  .lb-nav:hover {
+    background: var(--accent);
+    color: #1a1408;
+    border-color: var(--accent);
+  }
+
+  .lb-prev { left: -12px; }
+  .lb-next { right: -12px; }
+
+  /* Image filter-effect controls (bonus feature) */
+  .fx-bar {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .fx-btn {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    padding: 7px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .fx-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .fx-btn.active {
+    background: var(--accent);
+    color: #1a1408;
+    border-color: var(--accent);
+  }
+  .site-footer {
+    text-align: center;
+    padding: 30px 20px 50px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .site-footer span { color: var(--accent); }
+
+  /* Tablet */
+  @media (max-width: 900px) {
+    .gallery {
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .lb-prev { left: 4px; }
+    .lb-next { right: 4px; }
+    .lb-close { top: 8px; right: 8px; }
+  }
+
+  /* Mobile */
+  @media (max-width: 560px) {
+    .site-header { padding: 48px 18px 24px; }
+    .gallery {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 0 14px 70px;
+    }
+    .gallery-item { aspect-ratio: 1 / 1; }
+    .item-overlay h3 { font-size: 0.9rem; }
+    .item-overlay p { font-size: 0.7rem; }
+    .lb-nav { width: 40px; height: 40px; font-size: 1.1rem; }
+    .lb-close { width: 36px; height: 36px; font-size: 1.1rem; }
+    .lightbox-image-wrap img { max-height: 50vh; }
+    .fx-bar { gap: 6px; }
+  }
+
+  /* Respect reduced-motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>The <em>Aperture</em> Gallery</h1>
+    <p>A curated collection of moments — click any frame to view it full-size, browse with the arrow keys, and play with the filters.</p>
+  </header>
+  <nav class="filter-bar" id="filterBar">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="nature">Nature</button>
+    <button class="filter-btn" data-filter="animals">Animals</button>
+    <button class="filter-btn" data-filter="cars">Cars</button>
+    <button class="filter-btn" data-filter="food">Food</button>
+  </nav>
+  <main class="gallery" id="gallery">
+
+    <!-- NATURE -->
+    <div class="gallery-item" data-category="nature" data-title="Mountain Valley" data-desc="Nature · Sunrise over the ridgeline">
+      <img src="https://picsum.photos/id/1015/700/525" alt="Mountain Valley" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Nature</span><h3>Mountain Valley</h3><p>Sunrise over the ridgeline</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="nature" data-title="Forest Path" data-desc="Nature · A quiet trail through the pines">
+      <img src="https://picsum.photos/id/1018/700/525" alt="Forest Path" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Nature</span><h3>Forest Path</h3><p>A quiet trail through the pines</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="nature" data-title="Ocean Cliff" data-desc="Nature · Waves meeting the rock face">
+      <img src="https://picsum.photos/id/1043/700/525" alt="Ocean Cliff" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Nature</span><h3>Ocean Cliff</h3><p>Waves meeting the rock face</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="nature" data-title="Autumn Woods" data-desc="Nature · Golden light through the leaves">
+      <img src="https://picsum.photos/id/1039/700/525" alt="Autumn Woods" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Nature</span><h3>Autumn Woods</h3><p>Golden light through the leaves</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <!-- ANIMALS -->
+    <div class="gallery-item" data-category="animals" data-title="Curious Puppy" data-desc="Animals · A friendly face on the porch">
+      <img src="https://picsum.photos/id/237/700/525" alt="Curious Puppy" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Animals</span><h3>Curious Puppy</h3><p>A friendly face on the porch</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="animals" data-title="Wild Fox" data-desc="Animals · Spotted at the edge of the field">
+      <img src="https://picsum.photos/id/659/700/525" alt="Wild Fox" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Animals</span><h3>Wild Fox</h3><p>Spotted at the edge of the field</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="animals" data-title="Grazing Deer" data-desc="Animals · Early morning in the meadow">
+      <img src="https://picsum.photos/id/1074/700/525" alt="Grazing Deer" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Animals</span><h3>Grazing Deer</h3><p>Early morning in the meadow</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="animals" data-title="Majestic Horse" data-desc="Animals · Running free in open country">
+      <img src="https://picsum.photos/id/1084/700/525" alt="Majestic Horse" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Animals</span><h3>Majestic Horse</h3><p>Running free in open country</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <!-- CARS -->
+    <div class="gallery-item" data-category="cars" data-title="Classic Ride" data-desc="Cars · Chrome and curves">
+      <img src="https://picsum.photos/id/111/700/525" alt="Classic Ride" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Cars</span><h3>Classic Ride</h3><p>Chrome and curves</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="cars" data-title="Vintage Car" data-desc="Cars · Parked on a cobblestone street">
+      <img src="https://picsum.photos/id/133/700/525" alt="Vintage Car" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Cars</span><h3>Vintage Car</h3><p>Parked on a cobblestone street</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="cars" data-title="Highway Drive" data-desc="Cars · Open road at golden hour">
+      <img src="https://picsum.photos/id/163/700/525" alt="Highway Drive" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Cars</span><h3>Highway Drive</h3><p>Open road at golden hour</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="cars" data-title="Road Trip" data-desc="Cars · Somewhere between here and there">
+      <img src="https://picsum.photos/id/1071/700/525" alt="Road Trip" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Cars</span><h3>Road Trip</h3><p>Somewhere between here and there</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <!-- FOOD -->
+    <div class="gallery-item" data-category="food" data-title="Fresh Bake" data-desc="Food · Warm bread, straight from the oven">
+      <img src="https://picsum.photos/id/292/700/525" alt="Fresh Bake" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Food</span><h3>Fresh Bake</h3><p>Warm bread, straight from the oven</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="food" data-title="Gourmet Plate" data-desc="Food · Plated with care">
+      <img src="https://picsum.photos/id/365/700/525" alt="Gourmet Plate" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Food</span><h3>Gourmet Plate</h3><p>Plated with care</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="food" data-title="Morning Coffee" data-desc="Food · The first cup of the day">
+      <img src="https://picsum.photos/id/488/700/525" alt="Morning Coffee" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Food</span><h3>Morning Coffee</h3><p>The first cup of the day</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+    <div class="gallery-item" data-category="food" data-title="Farm Table" data-desc="Food · Fresh ingredients, simply served">
+      <img src="https://picsum.photos/id/1080/700/525" alt="Farm Table" loading="lazy">
+      <div class="item-overlay"><span class="item-tag">Food</span><h3>Farm Table</h3><p>Fresh ingredients, simply served</p></div>
+      <div class="expand-icon">⤢</div>
+    </div>
+
+  </main>
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-content">
+      <button class="lb-close" id="lbClose" aria-label="Close">&times;</button>
+      <button class="lb-nav lb-prev" id="lbPrev" aria-label="Previous image">&#8249;</button>
+      <button class="lb-nav lb-next" id="lbNext" aria-label="Next image">&#8250;</button>
+
+      <div class="lightbox-image-wrap">
+        <img id="lbImage" src="" alt="">
+      </div>
+
+      <div class="lightbox-caption">
+        <h3 id="lbTitle"></h3>
+        <p id="lbDesc"></p>
+        <p class="lightbox-counter" id="lbCounter"></p>
+      </div>
+
+      <!-- Bonus: image filter-effect toggles -->
+      <div class="fx-bar" id="fxBar">
+        <button class="fx-btn active" data-fx="none">Original</button>
+        <button class="fx-btn" data-fx="grayscale">Grayscale</button>
+        <button class="fx-btn" data-fx="sepia">Sepia</button>
+        <button class="fx-btn" data-fx="bright">Bright</button>
+        <button class="fx-btn" data-fx="contrast">Contrast</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    Built with HTML, CSS &amp; vanilla JavaScript · Images via <span>picsum.photos</span>
+  </footer>
+  <script>
+    const filterBar   = document.getElementById('filterBar');
+    const gallery     = document.getElementById('gallery');
+    const galleryItems = Array.from(gallery.querySelectorAll('.gallery-item'));
+
+    const lightbox    = document.getElementById('lightbox');
+    const lbImage     = document.getElementById('lbImage');
+    const lbTitle     = document.getElementById('lbTitle');
+    const lbDesc      = document.getElementById('lbDesc');
+    const lbCounter   = document.getElementById('lbCounter');
+    const lbClose     = document.getElementById('lbClose');
+    const lbPrev      = document.getElementById('lbPrev');
+    const lbNext      = document.getElementById('lbNext');
+    const fxBar       = document.getElementById('fxBar');
+
+    // Tracks which items are currently visible (respecting the active filter)
+    // so Prev/Next only cycle through images the user can actually see.
+    let visibleItems = [...galleryItems];
+    let currentIndex = 0;
+    let currentFx = 'none';
+    filterBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+
+      // Toggle active state on the pills
+      filterBar.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const filter = btn.dataset.filter;
+
+      galleryItems.forEach(item => {
+        const matches = filter === 'all' || item.dataset.category === filter;
+        item.classList.toggle('hide', !matches);
+      });
+
+      // Recalculate which items are visible, for lightbox navigation
+      visibleItems = galleryItems.filter(item => !item.classList.contains('hide'));
+    });
+    galleryItems.forEach(item => {
+      item.addEventListener('click', () => {
+        // Recompute the visible set at click-time (in case a filter is active)
+        visibleItems = galleryItems.filter(i => !i.classList.contains('hide'));
+        currentIndex = visibleItems.indexOf(item);
+        openLightbox();
+      });
+    });
+
+    function openLightbox() {
+      updateLightboxContent();
+      lightbox.classList.add('open');
+      document.body.style.overflow = 'hidden'; // prevent background scroll
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      document.body.style.overflow = '';
+      resetFx(); // reset any applied filter effect when closing
+    }
+    function updateLightboxContent() {
+      const item = visibleItems[currentIndex];
+      const img = item.querySelector('img');
+
+      // Swap in a larger version of the same picsum image for the lightbox
+      const bigSrc = img.src.replace('/700/525', '/1400/1000');
+
+      lbImage.src = bigSrc;
+      lbImage.alt = item.dataset.title;
+      lbTitle.textContent = item.dataset.title;
+      lbDesc.textContent = item.dataset.desc;
+      lbCounter.textContent = `${currentIndex + 1} / ${visibleItems.length}`;
+
+      resetFx();
+    }
+    function showPrev() {
+      currentIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length;
+      updateLightboxContent();
+    }
+
+    function showNext() {
+      currentIndex = (currentIndex + 1) % visibleItems.length;
+      updateLightboxContent();
+    }
+
+    lbPrev.addEventListener('click', (e) => { e.stopPropagation(); showPrev(); });
+    lbNext.addEventListener('click', (e) => { e.stopPropagation(); showNext(); });
+
+    lbClose.addEventListener('click', closeLightbox);
+
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('open')) return;
+
+      if (e.key === 'ArrowLeft')  showPrev();
+      if (e.key === 'ArrowRight') showNext();
+      if (e.key === 'Escape')     closeLightbox();
+    });
+
+    const fxMap = {
+      none:      'none',
+      grayscale: 'grayscale(1)',
+      sepia:     'sepia(0.8)',
+      bright:    'brightness(1.35) saturate(1.1)',
+      contrast:  'contrast(1.4)'
+    };
+
+    fxBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.fx-btn');
+      if (!btn) return;
+
+      fxBar.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      currentFx = btn.dataset.fx;
+      lbImage.style.filter = fxMap[currentFx];
+    });
+
+    function resetFx() {
+      currentFx = 'none';
+      lbImage.style.filter = fxMap.none;
+      fxBar.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('active'));
+      fxBar.querySelector('[data-fx="none"]').classList.add('active');
+    }
+  </script>
+</body>
+</html>
